@@ -10,7 +10,7 @@ const server = http.createServer(app);
 
 const io = new Server(server, {
   cors: {
-    origin: "https://secretgame123.netlify.app/",
+    origin: "https://secretgame123.netlify.app",
     methods: ["GET", "POST"],
   },
 });
