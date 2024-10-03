@@ -52,6 +52,8 @@ io.on("connection", (socket) => {
   });
 });
 
-server.listen(3001, () => {
-  console.log("SERVER IS RUNNING");
+const PORT = process.env.PORT || 3001; // Default to 3001 for local development
+
+server.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
 });
