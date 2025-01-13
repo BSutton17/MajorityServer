@@ -10,7 +10,7 @@ const server = http.createServer(app);
 
 const io = new Server(server, {
   cors: {
-    origin: "https://jeopardy-buzzer.netlify.app",
+    origin: "https://hypothetical.netlify.app/",
     methods: ["GET", "POST"],
   },
 });
