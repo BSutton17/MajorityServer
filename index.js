@@ -10,7 +10,7 @@ const server = http.createServer(app);
 
 const io = new Server(server, {
   cors: {
-    origin: "https://hypothetical.netlify.app",
+    origin: "http://localhost:3000",
     methods: ["GET", "POST"],
   },
 });
@@ -18,8 +18,7 @@ const io = new Server(server, {
 let rooms = {};
 let playerAnswers = {};
 let playerNames = {};
-let lastPlayerToAnswer = {};
-let lastRandomPlayer = {}; 
+let disconnectTimers = {}; 
 
 io.on("connection", (socket) => {
   console.log(`User Connected: ${socket.id}`);
@@ -28,71 +27,56 @@ io.on("connection", (socket) => {
     io.emit("gameStarted");
   });
 
-  socket.on("broadcast_prompt", (msg, room) => {
-    io.to(room).emit("display_prompt", msg);
+  socket.on("broadcast_options", (room, options) => {
+    io.to(room).emit("display_options", options);
   });
 
   socket.on("reset_game", (room) => {
     playerAnswers = {};
     io.to(room).emit("reset_game");
   });
+
   socket.on("player_answer", ({ room, name, answer }) => {
     if (!rooms[room]) {
       rooms[room] = { players: [], liarSet: false };
     }
-  
+
     if (!rooms[room].players.includes(name)) {
       rooms[room].players.push(name);
     }
-  
+
     if (!playerAnswers[room]) {
       playerAnswers[room] = {};
     }
-  
+
     playerAnswers[room][name] = answer;
-  
-    // Track the last player to answer
-    lastPlayerToAnswer[room] = name;
-  
+
     const playersInRoom = rooms[room].players.length;
     const answersInRoom = Object.keys(playerAnswers[room]).length;
-  
+
     // Check if all players have answered
     if (playersInRoom === answersInRoom) {
-      const availablePlayers = rooms[room].players;
-  
-      // Select a random player (without excluding the last random player)
-      const changeAnswerIndex = Math.floor(Math.random() * availablePlayers.length);
-      const randomPlayer = availablePlayers[changeAnswerIndex];
-  
-      lastRandomPlayer[room] = randomPlayer;
-  
-      if (playerAnswers[room][randomPlayer]) {
-        playerAnswers[room][randomPlayer] = playerAnswers[room][randomPlayer] === "Yes" ? "No" : "Yes";
-  
-        const socketId = Object.keys(playerNames).find(id => playerNames[id] === randomPlayer);
-        if (socketId) {
-          io.to(socketId).emit("answer_changed", "Your answer has been changed. Lie your way through.");
-        }
-      }
-  
       io.to(room).emit("show_results", true);
+      io.to(room).emit("receive_answers", playerAnswers[room]);
     }
-    io.to(room).emit("receive_answers", playerAnswers[room]);
   });
-  
 
-  socket.on("join_room", (room, name ) => {
+  socket.on("join_room", (room, name) => {
     socket.join(room);
 
-    console.log("room: " + room)
     if (!rooms[room]) {
-      rooms[room] = { players: [], liarSet: false };
+      rooms[room] = { players: [] };
     }
 
     if (!rooms[room].players.includes(name)) {
       rooms[room].players.push(name);
       playerNames[socket.id] = name;
+    }
+
+    // If the player was in the disconnect timers, cancel removal
+    if (disconnectTimers[name]) {
+      clearTimeout(disconnectTimers[name]);
+      delete disconnectTimers[name];
     }
 
     const isAdmin = rooms[room].players.length === 1;
@@ -101,41 +85,25 @@ io.on("connection", (socket) => {
     io.to(room).emit("updatePlayerList", rooms[room].players);
   });
 
-  // socket.on("create_room", ( name ) => {
-  //   const room = Math.floor(Math.random() * (9999 - 1000 + 1) + 1000);
-  //   socket.join(room);
-
-  //   if (!rooms[room]) {
-  //     rooms[room] = { players: [], liarSet: false };
-  //   }
-
-  //   if (!rooms[room].players.includes(name)) {
-  //     rooms[room].players.push(name);
-  //     playerNames[socket.id] = name;
-  //   }
-
-  //   const isAdmin = rooms[room].players.length === 1;
-  //   socket.emit("setAdmin", isAdmin);
-
-  //   io.to(room).emit("set_room", room);
-
-  //   io.to(room).emit("updatePlayerList", rooms[room].players);
-  //   console.log(`User with ID: ${socket.id} (Name: ${name}) joined room: ${room}`);
-  // });
-
   socket.on("disconnect", () => {
     const playerName = playerNames[socket.id];
     console.log(`User Disconnected: ${playerName} (${socket.id})`);
 
-    for (const room in rooms) {
-      if (rooms[room].players.includes(playerName)) {
-        rooms[room].players = rooms[room].players.filter((name) => name !== playerName);
-        delete playerAnswers[room]?.[playerName];
-        delete playerNames[socket.id];
+    if (!playerName) return;
 
-        io.to(room).emit("updatePlayerList", rooms[room].players);
+    // Set a timer to allow reconnection before removing the player
+    disconnectTimers[playerName] = setTimeout(() => {
+      for (const room in rooms) {
+        if (rooms[room].players.includes(playerName)) {
+          rooms[room].players = rooms[room].players.filter((name) => name !== playerName);
+          delete playerAnswers[room]?.[playerName];
+          delete playerNames[socket.id];
+
+          io.to(room).emit("updatePlayerList", rooms[room].players);
+        }
       }
-    }
+      delete disconnectTimers[playerName];
+    }, 60000);
   });
 });
 
