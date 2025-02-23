@@ -30,7 +30,12 @@ io.on("connection", (socket) => {
   socket.on("broadcast_options", (room, options) => {
     io.to(room).emit("display_options", options);
   });
+  
 
+  // socket.on("mystery-box", (room, mystery) => {
+  //   io.to(room).emit("set-box", mystery);
+  // });
+  
   socket.on("reset_game", (room) => {
     playerAnswers = {};
     io.to(room).emit("reset_game");
@@ -54,6 +59,10 @@ io.on("connection", (socket) => {
     const playersInRoom = rooms[room].players.length;
     const answersInRoom = Object.keys(playerAnswers[room]).length;
 
+    socket.on("rejoin", () =>{
+      answersInRoom++;
+    }) 
+
     // Check if all players have answered
     if (playersInRoom === answersInRoom) {
       io.to(room).emit("show_results", true);
@@ -61,7 +70,7 @@ io.on("connection", (socket) => {
     }
   });
 
-  socket.on("join_room", (room, name) => {
+  socket.on("join_room", (room, name, admin) => {
     socket.join(room);
 
     if (!rooms[room]) {
