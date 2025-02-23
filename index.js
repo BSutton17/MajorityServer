@@ -112,7 +112,7 @@ io.on("connection", (socket) => {
         }
       }
       delete disconnectTimers[playerName];
-    }, 60000);
+    }, 60);
   });
 });
 
