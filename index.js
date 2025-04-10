@@ -111,7 +111,6 @@ io.on("connection", (socket) => {
         room = r;
         break;
       }
-<<<<<<< HEAD
     }
   
     // If the player is in a room, remove them
@@ -124,10 +123,6 @@ io.on("connection", (socket) => {
     // Clean up playerNames and disconnectTimers
     delete playerNames[socket.id];
     delete disconnectTimers[playerName];
-=======
-      delete disconnectTimers[playerName];
-    }, 60);
->>>>>>> 5883bd1814ad9150aa50763f815a9a9defccf982
   });
   
 });
