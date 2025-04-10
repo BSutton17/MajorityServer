@@ -8,12 +8,13 @@ app.use(cors());
 
 const server = http.createServer(app);
 //https://majority1.netlify.app
-const io = new Server(server, {
+const io = require('socket.io')(server, {
   cors: {
-    origin: 'https://majority1.netlify.app',
-    methods: ["GET", "POST"],
-  },
+    origin: 'https://majority1.netlify.app',  
+    methods: ['GET', 'POST']
+  }
 });
+
 
 let rooms = {};
 let playerAnswers = {};
