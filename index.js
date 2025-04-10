@@ -10,7 +10,7 @@ const server = http.createServer(app);
 //https://majority1.netlify.app
 const io = new Server(server, {
   cors: {
-    origin: "https://majority1.netlify.app",
+    origin: 'https://majority1.netlify.app',
     methods: ["GET", "POST"],
   },
 });
